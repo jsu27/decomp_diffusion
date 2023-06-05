@@ -5,10 +5,11 @@ import numpy as np
 import copy
 from ema_pytorch import EMA
 
-from .util.dist_util import dev
+# from .util.dist_util import dev
 from .model_and_diffusion_util import *
 from .gen_image import get_gen_images
 
+device = 'cuda' if th.cuda.is_available() else 'cpu'
 
 def uniform_sample_timesteps(steps, batch_size):
     indices_np = np.random.choice(steps, size=(batch_size,))
@@ -45,7 +46,7 @@ def run_loop(model, gd, data, model_desc, save_desc, lr=1e-3, start_epoch=0, epo
     num_uncond_epochs = 0
     for epoch in range(start_epoch, start_epoch + total_epochs):
         batch, cond = next(data)
-        batch = batch.to(dev())
+        batch = batch.to(device)
         model_kwargs = {}
         if model_desc == 'encoded_autoencoder': # TODO deprecated
             model_kwargs['latent'] = None
@@ -56,9 +57,9 @@ def run_loop(model, gd, data, model_desc, save_desc, lr=1e-3, start_epoch=0, epo
             else:
                 
                 b = batch.shape[0]
-                rand_values = th.rand(b, 1).to(dev())
+                rand_values = th.rand(b, 1).to(device)
                 keep_mask = rand_values >= p_uncond
-                null_emb = th.zeros(b, model.latent_dim_expand).to(dev())
+                null_emb = th.zeros(b, model.latent_dim_expand).to(device)
                 latent_emb = model.encode_latent(batch)
                 emb = th.where(
                     keep_mask,
@@ -68,7 +69,7 @@ def run_loop(model, gd, data, model_desc, save_desc, lr=1e-3, start_epoch=0, epo
 
                 model_kwargs = dict(latent=emb)
 
-        t = uniform_sample_timesteps(gd.num_timesteps, len(batch)).to(dev())
+        t = uniform_sample_timesteps(gd.num_timesteps, len(batch)).to(device)
 
         loss = gd.training_losses(model, batch, t, model_kwargs=model_kwargs, latent_orthog=latent_orthog, downweight=downweight)
         loss = loss.mean() 
