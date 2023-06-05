@@ -32,10 +32,10 @@ def dev():
     Get the device to use for torch.distributed.
     """
     if th.cuda.is_available():
-        if 'LOCAL_RANK' in os.environ:
-            return th.device(f"cuda:{os.environ['LOCAL_RANK']}")
-        else:
-            return th.device("cuda")
+        # if 'LOCAL_RANK' in os.environ:
+        #     return th.device(f"cuda:{os.environ['LOCAL_RANK']}")
+        # else:
+        return th.device("cuda")
     return th.device("cpu")
 
 
