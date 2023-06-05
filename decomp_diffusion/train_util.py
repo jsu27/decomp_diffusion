@@ -5,9 +5,9 @@ import numpy as np
 import copy
 from ema_pytorch import EMA
 
-from util.dist_util import dev
-from model_and_diffusion_util import *
-from gen_image import get_gen_images
+from .util.dist_util import dev
+from .model_and_diffusion_util import *
+from .gen_image import get_gen_images
 
 
 def uniform_sample_timesteps(steps, batch_size):
