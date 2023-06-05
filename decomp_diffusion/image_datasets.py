@@ -22,7 +22,7 @@ from skimage.transform import resize as imresize
 # import tensorflow.compat.v1 as tf
 
 
-def get_dataset(dataset_type, start_index=0, num_images=None, resolution=64):
+def get_dataset(dataset_type, base_dir, start_index=0, num_images=None, resolution=64):
     """Get dataset class"""
     DATASET_MAPPING = dict(
         clevr=Clevr,
@@ -37,15 +37,15 @@ def get_dataset(dataset_type, start_index=0, num_images=None, resolution=64):
         faces=Faces
     )
     if dataset_type in DATASET_MAPPING:
-        dataset = DATASET_MAPPING[dataset_type](start_index=start_index, num_images=num_images, resolution=resolution)
+        dataset = DATASET_MAPPING[dataset_type](base_dir, start_index=start_index, num_images=num_images, resolution=resolution)
     else:
         raise NotImplementedError(f'dataset: {dataset_type} is not implemented.')
     return dataset
 
 class Data(Dataset):
-    def __init__(self, path='', resolution=64, start_index=0, num_images=None):
+    def __init__(self, base_dir, path='', resolution=64, start_index=0, num_images=None):
         self.resolution = resolution
-        self.base_dir = '/om2/user/jocelin/'
+        self.base_dir = base_dir
         self.path = self.base_dir + path
         self.images = sorted(glob(self.path))
         self.start_index = start_index
@@ -65,20 +65,20 @@ class Data(Dataset):
         return im, index
 
 class Clevr(Data):
-    def __init__(self, resolution=64, start_index=0, num_images=None):
-        super().__init__(path='images_clevr/*.png', resolution=resolution, start_index=start_index, num_images=num_images)
+    def __init__(self, base_dir, resolution=64, start_index=0, num_images=None):
+        super().__init__(base_dir, path='images_clevr/*.png', resolution=resolution, start_index=start_index, num_images=num_images)
 
 class ClevrToy(Data):
-    def __init__(self, resolution=64, start_index=0, num_images=None):
-        super().__init__(path='clevr_toy/*.png', resolution=resolution, start_index=start_index, num_images=num_images)
+    def __init__(self, base_dir, resolution=64, start_index=0, num_images=None):
+        super().__init__(base_dir, path='clevr_toy/*.png', resolution=resolution, start_index=start_index, num_images=num_images)
 
 class CelebaHQ(Data):
-    def __init__(self, resolution=64, start_index=0, num_images=None):
-        super().__init__(path='celebahq/data128x128/*.jpg', resolution=resolution, start_index=start_index, num_images=num_images)
+    def __init__(self, base_dir, resolution=64, start_index=0, num_images=None):
+        super().__init__(base_dir, path='celebahq/data128x128/*.jpg', resolution=resolution, start_index=start_index, num_images=num_images)
 
 class Falcor3d(Data):
-    def __init__(self, resolution=64, start_index=0, num_images=None):
-        super().__init__(path='Falcor3D_down128/images/*.png', resolution=resolution, start_index=start_index, num_images=num_images)
+    def __init__(self, base_dir, resolution=64, start_index=0, num_images=None):
+        super().__init__(base_dir, path='Falcor3D_down128/images/*.png', resolution=resolution, start_index=start_index, num_images=num_images)
 
 # class Falcor3dFilter(Dataset):
 #     def __init__(self, stage=0, filter_light=False, resolution=64, num_images=None):
@@ -124,8 +124,8 @@ class Falcor3d(Data):
 class Kitti(Data):
     """Constructs a dataset with N circles, N is the number of components set by flags"""
 
-    def __init__(self, resolution=64, num_images=None, start_index=0):
-        super().__init__(path='kitti_data_tracking_image_2/training/image_02/*/*.png', resolution=resolution, start_index=start_index, num_images=num_images)
+    def __init__(self, base_dir, resolution=64, num_images=None, start_index=0):
+        super().__init__(base_dir, path='kitti_data_tracking_image_2/training/image_02/*/*.png', resolution=resolution, start_index=start_index, num_images=num_images)
 
     def __getitem__(self, index):
         # 433 - 808
@@ -140,8 +140,8 @@ class Kitti(Data):
 class VirtualKitti(Data):
     """Constructs a dataset with N circles, N is the number of components set by flags"""
 
-    def __init__(self, resolution=64, num_images=None, start_index=0):
-        super().__init__(path='vkitti_2.0.3_rgb/*/*/frames/rgb/Camera_0/*.jpg', resolution=resolution, start_index=start_index, num_images=num_images)
+    def __init__(self, base_dir, resolution=64, num_images=None, start_index=0):
+        super().__init__(base_dir, path='vkitti_2.0.3_rgb/*/*/frames/rgb/Camera_0/*.jpg', resolution=resolution, start_index=start_index, num_images=num_images)
 
     def __getitem__(self, index):
         # 433 - 808
@@ -154,12 +154,12 @@ class VirtualKitti(Data):
         return im, index
 
 class CombinedKitti(Data):
-    def __init__(self, resolution=64, start_index=0, num_images=None):
+    def __init__(self, base_dir, resolution=64, start_index=0, num_images=None):
         """Initialize this dataset class.
         Parameters:
             opt (Option class) -- stores all the experiment flags; needs to be a subclass of BaseOptions
         """
-        self.base_dir = '/om2/user/jocelin/'
+        self.base_dir = base_dir 
         self.path1 = self.base_dir + 'kitti_data_tracking_image_2/training/image_02/*/*.png'
         self.path2 = self.base_dir + 'vkitti_2.0.3_rgb/*/*/frames/rgb/Camera_0/*.jpg'
 
@@ -223,16 +223,16 @@ class CombinedKitti(Data):
 #         return 1e6 if num_images == None else num_images
 
 class Tetrominoes(Data):
-    def __init__(self, resolution=32, start_index=0, num_images=None):
-        super().__init__(path='tetris_images_32/*.png', resolution=resolution, start_index=start_index, num_images=num_images)
+    def __init__(self, base_dir, resolution=32, start_index=0, num_images=None):
+        super().__init__(base_dir, path='tetris_images_32/*.png', resolution=resolution, start_index=start_index, num_images=num_images)
 
 class Anime(Data):
-    def __init__(self, resolution=64, start_index=0, num_images=None):
-        super().__init__(path='anime_portraits/*.jpg', resolution=resolution, start_index=start_index, num_images=num_images)
+    def __init__(self, base_dir, resolution=64, start_index=0, num_images=None):
+        super().__init__(base_dir, path='anime_portraits/*.jpg', resolution=resolution, start_index=start_index, num_images=num_images)
 
 class Faces(Data):
-    def __init__(self, resolution=64, num_images=None, start_index=0):
-        self.base_dir = '/om2/user/jocelin/'
+    def __init__(self, base_dir, resolution=64, num_images=None, start_index=0):
+        self.base_dir = base_dir
         self.path1 = self.base_dir + 'celebahq/data128x128/*.jpg'
         self.path2 = self.base_dir + 'anime_portraits/*.jpg'
         self.resolution = resolution
@@ -247,7 +247,7 @@ class Faces(Data):
 
 def load_data(
     *,
-    root,
+    base_dir,
     split,
     dataset_type,
     batch_size,
@@ -260,7 +260,7 @@ def load_data(
 ):  
     # if not root:
     #     raise ValueError("unspecified data directory")
-    dataset = get_dataset(dataset_type, num_images=num_images, resolution=image_size)
+    dataset = get_dataset(dataset_type, base_dir=base_dir, num_images=num_images, resolution=image_size)
     if deterministic:
         loader = DataLoader(
             dataset, batch_size=batch_size, shuffle=False, num_workers=8, drop_last=True

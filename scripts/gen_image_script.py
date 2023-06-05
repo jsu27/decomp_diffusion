@@ -39,6 +39,7 @@ if __name__=='__main__':
     parser.add_argument('--dataset2', default=None) # for multi-modal combination
     parser.add_argument('--gen_images', default=0, type=int) # generate many images from dataset
     parser.add_argument('--sample_method', default='ddim')
+    parser.add_argument('--data_dir', default='') # required if gen multiple
     parser.add_argument('--separate', action='store_true')
     parser.add_argument('--num_images', default=4, type=int) # if gen 1 img, how many samples
     parser.add_argument('--combine_method', default=None)
@@ -65,6 +66,7 @@ if __name__=='__main__':
     separate = args.separate
     combine_method = args.combine_method
     indices = args.indices
+    data_dir = args.data_dir
 
     model_desc = args.model_desc
     training_model_defaults = unet_model_defaults() if model_desc == 'unet_model' else model_defaults()
@@ -108,8 +110,8 @@ if __name__=='__main__':
 
     if gen_images > 0: # generate multiple imgs
         num_digits = len(str(gen_images * step_size))
-        data = get_dataset(dataset, num_images=gen_images * step_size, resolution=image_size).images
-        data2 = get_dataset(dataset2, num_images=gen_images * step_size, resolution=image_size).images
+        data = get_dataset(dataset, base_dir=data_dir, num_images=gen_images * step_size, resolution=image_size).images
+        data2 = get_dataset(dataset2, base_dir=data_dir, num_images=gen_images * step_size, resolution=image_size).images
         if combine_method is None:
             for _i in range(gen_images):
                 i = _i * step_size

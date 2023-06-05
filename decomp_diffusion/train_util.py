@@ -1,15 +1,12 @@
 import torch as th
-import pdb
+import argparse
 import os
-import pickle
 import numpy as np
-import random
 import copy
 from ema_pytorch import EMA
 
-import util.logger as logger
 import util.dist_util as dist_util
-
+from model_and_diffusion_util import *
 from gen_image import get_gen_images
 
 
@@ -39,8 +36,6 @@ def run_loop(model, gd, data, model_desc, save_desc, lr=1e-3, start_epoch=0, epo
                                 lr=lr)
                                 # weight_decay = 1e-8)
     total_epochs = epoch_block * num_its
-    outputs = []
-    losses = []
 
     save_dir = 'logs_' + save_desc # f'{save_desc}_params/'
     os.makedirs(save_dir, exist_ok=True)

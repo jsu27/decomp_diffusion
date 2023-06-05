@@ -82,7 +82,7 @@ def main():
     logger.log("creating data loader...")
 
     data = load_data(
-        root=args.data_dir,
+        base_dir=args.data_dir,
         split='train',
         dataset_type=dataset,
         batch_size=args.batch_size,
