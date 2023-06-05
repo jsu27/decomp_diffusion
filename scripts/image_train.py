@@ -24,7 +24,7 @@ th.manual_seed(0)
 np.random.seed(0)
 
 DEFAULT_IM = dict(
-    clevr='im_10_clevr.png',
+    clevr='clevr_im_10.png',
     clevr_toy='im_8_clevr_toy.png',
     celebahq='im_19_celebahq.jpg',
     falcor3d='im_10_falcor3d.png',

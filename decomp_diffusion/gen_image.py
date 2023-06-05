@@ -20,7 +20,7 @@ th.manual_seed(0)
 np.random.seed(0)
 
 
-def get_im(im_path='im_10_clevr.png', resolution=64):
+def get_im(im_path='clevr_im_10.png', resolution=64):
     im = imread(im_path)
     if 'kitti' in im_path: # kitti, vkitti
         im = im[:, 433:808, :]
@@ -56,7 +56,7 @@ def gen_image(model, gd, sample_method='ddim', batch_size=1, image_size=64, devi
     save_image(grid, os.path.join(save_dir, f'{dataset}_{image_size}{desc}.png'))
 
 
-def gen_image_and_components(model, gd, separate=False, num_components=4, sample_method='ddim', im_path='im_10.png', batch_size=1, image_size=64, device='cuda', model_kwargs=None, num_images=4, desc='', save_dir='', dataset='clevr'):
+def gen_image_and_components(model, gd, separate=False, num_components=4, sample_method='ddim', im_path='clevr_im_10.png', batch_size=1, image_size=64, device='cuda', model_kwargs=None, num_images=4, desc='', save_dir='', dataset='clevr'):
     """Generate row of orig image, individual components, and reconstructed image"""
     sep = '_' if len(desc) > 0 else ''
     orig_img = get_im(im_path, resolution=image_size)
@@ -130,7 +130,7 @@ def get_model_fn(model, gd, batch_size=1, guidance_scale=10.0, device='cuda'):
     return model_fn
 
 
-def get_gen_images(model, gd, sample_method='ddim', im_path='im_10.png', latent=None, batch_size=1, image_size=64, device='cuda', model_kwargs=None, num_images=4, desc='', save_dir='', free=False, guidance_scale=10.0, dataset='clevr', separate=False):
+def get_gen_images(model, gd, sample_method='ddim', im_path='clevr_im_10.png', latent=None, batch_size=1, image_size=64, device='cuda', model_kwargs=None, num_images=4, desc='', save_dir='', free=False, guidance_scale=10.0, dataset='clevr', separate=False):
     orig_im = get_im(im_path=im_path, resolution=image_size)
     if latent == None:
         latent = model.encode_latent(orig_im)
