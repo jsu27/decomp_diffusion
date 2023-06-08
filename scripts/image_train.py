@@ -4,11 +4,8 @@ Train a diffusion model on images.
 import os
 import argparse
 import json
-import pdb
 
 import torch as th
-from torch import nn
-import torch.nn.functional as F
 
 import decomp_diffusion.util.logger as logger
 import decomp_diffusion.util.dist_util as dist_util
@@ -47,6 +44,7 @@ def main():
     dataset = args.dataset
     downweight = args.downweight
     image_size = args.image_size
+    use_dist = args.use_dist
     # log args
 
     predict_desc = 'xstart' if predict_xstart else 'eps'
@@ -75,15 +73,12 @@ def main():
     gd = create_gaussian_diffusion(**diffusion_kwargs)
 
     relevant_keys = list(training_model_defaults.keys()) +  list(diffusion_defaults().keys()) + list(training_defaults().keys())
-    # json.dump(args_to_dict(args, model_and_diffusion_keys),
-    #     open(os.path.join(log_folder, 'arguments.json'), "w"), sort_keys=True, indent=4)
     json.dump(args_to_dict(args, relevant_keys),
         open(os.path.join(log_folder, 'arguments.json'), "w"), sort_keys=True, indent=4)
     logger.log("creating data loader...")
 
     data = load_data(
         base_dir=args.data_dir,
-        split='train',
         dataset_type=dataset,
         batch_size=args.batch_size,
         image_size=image_size,
@@ -93,7 +88,6 @@ def main():
     logger.log("training...")
 
     default_im = DEFAULT_IM[dataset]
-    print('downweight', downweight)
 
     start_epoch = 0
     if len(args.resume_checkpoint) > 0:
@@ -103,7 +97,8 @@ def main():
         model.load_state_dict(checkpoint)
         start_epoch = parse_epoch(ckpt_path)
         print(f'resuming from {start_epoch}')
-    run_loop(model, gd, data, model_desc, save_desc, start_epoch=start_epoch, p_uncond=p_uncond, default_im=default_im, latent_orthog=args.latent_orthog, dataset=dataset, downweight=downweight, image_size=image_size)
+    
+    run_loop(model, gd, data, save_desc, start_epoch=start_epoch, epoch_block=args.epoch_block, num_its=args.num_its, p_uncond=p_uncond, default_im=default_im, latent_orthog=args.latent_orthog, dataset=dataset, downweight=downweight, image_size=image_size, use_dist=use_dist)
 
 def parse_epoch(ckpt_path):
     """ckpt path must be {save_dir}/model_{epoch}.pt or {save_dir}/ema_{ema_rate}_{epoch}.pt"""
@@ -124,7 +119,10 @@ def training_defaults():
         p_uncond=0.0,
         latent_orthog=False,
         extra_desc='',
-        downweight=False
+        downweight=False,
+        epoch_block=10000,
+        num_its=20,
+        use_dist=True # default set up dist training
     )
 
 def create_argparser():

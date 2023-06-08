@@ -5,11 +5,8 @@ import numpy as np
 import copy
 from ema_pytorch import EMA
 
-# from .util.dist_util import dev
 from .model_and_diffusion_util import *
 from .gen_image import get_gen_images
-
-device = 'cuda' if th.cuda.is_available() else 'cpu'
 
 def uniform_sample_timesteps(steps, batch_size):
     indices_np = np.random.choice(steps, size=(batch_size,))
@@ -28,7 +25,14 @@ def params_to_state_dict(target_params, model):
         state_dict[name] = target_params[i]
     return state_dict
 
-def run_loop(model, gd, data, model_desc, save_desc, lr=1e-3, start_epoch=0, epoch_block=10000, num_its=20, p_uncond=0.0, default_im='im_10.png', latent_orthog=False, ema_rate=0.9999, dataset='clevr', downweight=False, image_size=64):
+def run_loop(model, gd, data, save_desc, lr=1e-3, start_epoch=0, epoch_block=10000, num_its=20, p_uncond=0.0, default_im='im_10.png', latent_orthog=False, ema_rate=0.9999, dataset='clevr', downweight=False, image_size=64, use_dist=False):
+    if use_dist: # distributed training
+        from .util.dist_util import dev
+        device = dev()
+    else:
+        device = 'cuda' if th.cuda.is_available() else 'cpu'
+
+    
     # ema_params = copy.deepcopy(list(model.parameters()))
     ema_model = EMA(model, beta=ema_rate, update_every=1)
     ema_model.to('cuda')
@@ -48,26 +52,22 @@ def run_loop(model, gd, data, model_desc, save_desc, lr=1e-3, start_epoch=0, epo
         batch, cond = next(data)
         batch = batch.to(device)
         model_kwargs = {}
-        if model_desc == 'encoded_autoencoder': # TODO deprecated
-            model_kwargs['latent'] = None
+    
+        if not free:
+            model_kwargs = dict(latent=None, x_start=batch)
         else:
-
-            if not free:
-                model_kwargs = dict(latent=None, x_start=batch)
-            else:
-                
-                b = batch.shape[0]
-                rand_values = th.rand(b, 1).to(device)
-                keep_mask = rand_values >= p_uncond
-                null_emb = th.zeros(b, model.latent_dim_expand).to(device)
-                latent_emb = model.encode_latent(batch)
-                emb = th.where(
-                    keep_mask,
-                    latent_emb,
-                    null_emb
-                )
-
-                model_kwargs = dict(latent=emb)
+            
+            b = batch.shape[0]
+            rand_values = th.rand(b, 1).to(device)
+            keep_mask = rand_values >= p_uncond
+            null_emb = th.zeros(b, model.latent_dim_expand).to(device)
+            latent_emb = model.encode_latent(batch)
+            emb = th.where(
+                keep_mask,
+                latent_emb,
+                null_emb
+            )
+            model_kwargs = dict(latent=emb)
 
         t = uniform_sample_timesteps(gd.num_timesteps, len(batch)).to(device)
 

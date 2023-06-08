@@ -1,6 +1,5 @@
 import math
 from abc import abstractmethod
-from collections import OrderedDict
 
 import torch as th
 import torch.nn as nn
