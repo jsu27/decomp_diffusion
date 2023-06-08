@@ -1,19 +1,10 @@
 import os
 import numpy as np
-import argparse
 import torch as th
 
 from torchvision.utils import make_grid, save_image
-from PIL import Image
-from pathlib import Path
-from tqdm import tqdm
 from imageio import imread
 from skimage.transform import resize as imresize
-# from ema_pytorch import EMA
-
-# from decomp_diffusion.image_datasets import get_dataset
-# from util.model_and_diffusion_util import * # TODO refine
-# from diffusion.respace import SpacedDiffusion #, _WrappedModel
 
 # fix randomness
 th.manual_seed(0)
@@ -239,48 +230,12 @@ def get_gen_images(model, gd, sample_method='ddim', im_path='clevr_im_10.png', l
     # use classifier free
     gen_model = model if not free else get_model_fn(model, gd, batch_size=batch_size, guidance_scale=guidance_scale)
     
-    # if not separate:
     gen_image_and_components(gen_model, gd, separate=separate, num_components=model.num_components, sample_method=sample_method, im_path=im_path, batch_size=batch_size, image_size=image_size, device=device, model_kwargs=model_kwargs, num_images=num_images, desc=desc, save_dir=save_dir, dataset=dataset)
     
-    # else:
-    #     basename = os.path.basename(im_path)
-    #     save_image(orig_im, os.path.join(save_dir, f'orig_{basename}')) # save original
 
-    #     gen_image(gen_model, gd, batch_size=batch_size, image_size=image_size, device=device, model_kwargs=model_kwargs, num_images=num_images, desc=desc, save_dir=save_dir, dataset=dataset)
-
-    #     # sample with 1 latent at a time
-    #     num_comps = model.num_components
-    #     latent_dim = latent.shape[1] // num_comps # length of single latent
-    #     for i in range(num_comps):
-    #         model_kwargs['latent_index'] = i
-    #         gen_image(gen_model, gd, batch_size=batch_size, image_size=image_size, device=device, model_kwargs=model_kwargs, num_images=num_images, desc=desc+'_'+str(i), save_dir=save_dir, dataset=dataset)
-
-class CombinedModel:
-    def __init__(self, model, model2):
-        """model and model2 must have same params"""
-        self.model = model
-        self.model2 = model2
-
-        # model params
-        self.latent_dim = model.latent_dim
-        self.latent_dim_expand = model.latent_dim_expand
-        self.num_components = model.num_components 
-
-    def __call__(self, x, ts, **kwargs):
-        out1 = self.model(x, ts, **kwargs)
-        out2 = self.model2(x, ts, **kwargs)
-        return (out1 + out2) / 2
-    
-    def encode_latent(self, x):
-        latent1 = self.model.encode_latent(x)
-        latent2 = self.model2.encode_latent(x)
-        return th.cat((latent1, latent2)) # TODO shape
-    
-def combine_components(model, gd, indices=None, sample_method='ddim', im1='im_19.jpg', im2='im_02.jpg', device='cuda', num_images=4, model_kwargs={}, desc='', save_dir='', dataset='celebahq', combine_method='add', image_size=64):
+def combine_components_slice(model, gd, indices=None, sample_method='ddim', im1='clevr_im_10.png', im2='clevr_im_25.png', device='cuda', num_images=4, model_kwargs={}, desc='', save_dir='', dataset='clevr', image_size=64):
     """Combine by adding components together
-    combine_method: 'add', 'slice'
     """
-    assert combine_method in ('add', 'slice')
     assert sample_method in ('ddpm', 'ddim')
     
     im1 = get_im(im_path=im1, resolution=image_size)
@@ -290,37 +245,33 @@ def combine_components(model, gd, indices=None, sample_method='ddim', im1='im_19
     latent1 = model.encode_latent(im1)
     latent2 = model.encode_latent(im2)
 
-    latent_dim = model.latent_dim
     num_comps = model.num_components 
-    
-    if combine_method == 'add':
-        combined_latent = (latent1 + latent2) / 2 # averaged
-    else:
-        if indices == None:
-            half = num_comps // 2
-            indices = [1] * half + [0] * half # first half 1, second half 0
-            indices = th.Tensor(indices) == 1
-            indices = indices.reshape(num_comps, 1)
-        elif type(indices) == str:
-            indices = indices.split(',')
-            indices = [int(ind) for ind in indices]
-            indices = th.Tensor(indices).reshape(-1, 1) == 1
-        assert len(indices) == num_comps
-        indices = indices.to(device)
 
-        latent1 = latent1.reshape(num_comps, -1).to(device)
-        latent2 = latent2.reshape(num_comps, -1).to(device)
+    # get latent slices
+    if indices == None:
+        half = num_comps // 2
+        indices = [1] * half + [0] * half # first half 1, second half 0
+        indices = th.Tensor(indices) == 1
+        indices = indices.reshape(num_comps, 1)
+    elif type(indices) == str:
+        indices = indices.split(',')
+        indices = [int(ind) for ind in indices]
+        indices = th.Tensor(indices).reshape(-1, 1) == 1
+    assert len(indices) == num_comps
+    indices = indices.to(device)
 
-        combined_latent = th.where(indices, latent1, latent2)
-        combined_latent = combined_latent.reshape(1, -1)
-        # combined_latent = th.cat((latent1[:, :latent_dim * idx], latent2[:, latent_dim * idx:]), axis=1)
+    latent1 = latent1.reshape(num_comps, -1).to(device)
+    latent2 = latent2.reshape(num_comps, -1).to(device)
+
+    combined_latent = th.where(indices, latent1, latent2)
+    combined_latent = combined_latent.reshape(1, -1)
     model_kwargs['latent'] = combined_latent
     
-    # gen_image(model, gd, sample_method=sample_method, device=device, model_kwargs=model_kwargs, num_images=num_images, desc=desc, save_dir=save_dir, dataset=dataset)
     sample_loop_func = gd.p_sample_loop if sample_method == 'ddpm' else gd.ddim_sample_loop
     if sample_method == 'ddim':
         model = gd._wrap_model(model)
-        
+
+    # sampling loop
     sample = sample_loop_func(
             model,
             (1, 3, image_size, image_size),
@@ -331,15 +282,122 @@ def combine_components(model, gd, indices=None, sample_method='ddim', im1='im_19
             cond_fn=None,
         )[:1]
 
-    save_image(sample, os.path.join(save_dir, f'{dataset}_{image_size}{desc}_combo.png')) # same combo img separately
+    all_samples.append(sample)
+
+    samples = th.cat(all_samples, dim=0).cpu()   
+    grid = make_grid(samples, nrow=3, padding=0)
+    save_image(grid, os.path.join(save_dir, f'{dataset}_{image_size}{desc}_row.png'))
+
+def get_combined_model_add(model, latent1, latent2):
+    def gen_model(x, ts, **model_kwargs):
+        model_kwargs['latent'] = latent1
+        out1 = model(x, ts, **model_kwargs)
+        model_kwargs['latent'] = latent2
+        out2 = model(x, ts, **model_kwargs)
+        return (out1 + out2) / 2
+    return gen_model
+
+
+def combine_components_add(model, gd, sample_method='ddim', im1='clevr_im_10.png', im2='clevr_im_25.png', device='cuda', num_images=4, model_kwargs={}, desc='', save_dir='', dataset='clevr', image_size=64):
+    """Combine by adding components together
+    """
+    assert sample_method in ('ddpm', 'ddim')
+
+    im1 = get_im(im_path=im1, resolution=image_size)
+    im2 = get_im(im_path=im2, resolution=image_size)
+    all_samples = [im1, im2]
+
+    latent1 = model.encode_latent(im1)
+    latent2 = model.encode_latent(im2)
+
+    gen_model = get_combined_model_add(model, latent1, latent2)
+    
+    sample_loop_func = gd.p_sample_loop if sample_method == 'ddpm' else gd.ddim_sample_loop
+    if sample_method == 'ddim':
+        gen_model = gd._wrap_model(gen_model)
+    
+    sample = sample_loop_func(
+            gen_model,
+            (1, 3, image_size, image_size),
+            device=device,
+            clip_denoised=True,
+            progress=True,
+            model_kwargs=model_kwargs,
+            cond_fn=None,
+        )[:1]
 
     all_samples.append(sample)
 
     samples = th.cat(all_samples, dim=0).cpu()   
     grid = make_grid(samples, nrow=3, padding=0)
-    if len(desc) > 0:
-        desc = '_' + desc
-    if len(save_dir) > 0:
-        os.makedirs(save_dir, exist_ok=True)
-
     save_image(grid, os.path.join(save_dir, f'{dataset}_{image_size}{desc}_row.png'))
+
+def get_combined_model_cross(model1, model2, latent1, latent2, indices):
+    num_comps = model1.num_components
+    def gen_model(x_t, t, **model_kwargs):
+        result = []
+        for i in range(len(indices)):
+            model_kwargs['latent_index'] = i
+            target_model = model1 if indices[i] == 1 else model2
+            target_latent = latent1 if indices[i] == 1 else latent2
+            model_kwargs['latent'] = target_latent
+            out = target_model(x_t, t, **model_kwargs)
+            result.append(out) # b, 3, 64, 64
+        result = th.cat(result, dim=0) # 4b, 3, 64, 64 
+        b = x_t.shape[0]
+
+        result = result.reshape(-1, num_comps, *x_t.shape[1:]) # b, 4, 3, 64, 64
+        result = result.mean(dim=1) # b, 3, 64, 64
+        return result
+
+    return gen_model
+
+def combine_components_cross_dataset(model, model2, gd, indices=None, sample_method='ddim', im1='im_19.jpg', im2='im_02.jpg', device='cuda', num_images=4, model_kwargs={}, desc='', save_dir='', dataset='celebahq', combine_method='add', image_size=64):
+    """Combine across 2 models trained on different datasets
+    """
+    assert sample_method in ('ddpm', 'ddim')
+    sample_loop_func = gd.p_sample_loop if sample_method == 'ddpm' else gd.ddim_sample_loop
+
+    im1 = get_im(im_path=im1, resolution=image_size)
+    im2 = get_im(im_path=im2, resolution=image_size)
+    all_samples = [im1.cpu(), im2.cpu()]
+
+    latent1 = model.encode_latent(im1)
+    latent2 = model2.encode_latent(im2)
+
+    latent_dim = model.latent_dim
+    num_comps = model.num_components 
+
+    # get latent slices
+    if indices == None:
+        half = num_comps // 2
+        indices = [1] * half + [0] * half # first half 1, second half 0
+        indices = th.Tensor(indices) == 1
+        indices = indices.reshape(num_comps, 1)
+    elif type(indices) == str:
+        indices = indices.split(',')
+        indices = [int(ind) for ind in indices]
+        indices = th.Tensor(indices).reshape(-1, 1) == 1
+    assert len(indices) == num_comps
+    
+    gen_model = get_combined_model_cross(model, model2, latent1, latent2, indices)
+    if sample_method == 'ddim':
+        gen_model = gd._wrap_model(gen_model)
+
+    samples = []
+    sample = sample_loop_func(
+            gen_model,
+            (1, 3, image_size, image_size),
+            device=device,
+            clip_denoised=True,
+            progress=True,
+            model_kwargs=model_kwargs,
+            cond_fn=None,
+        )[:1]
+        
+    all_samples.append(sample.cpu())
+
+    samples = th.cat(all_samples, dim=0)
+    grid = make_grid(samples, nrow=3, padding=0)
+    save_image(grid, os.path.join(save_dir, f'{dataset}_{image_size}{desc}_row.png'))
+
