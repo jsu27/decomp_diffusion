@@ -1,6 +1,6 @@
 from .diffusion.gaussian_diffusion import get_named_beta_schedule, GaussianDiffusion
 from .model.unet import UNetModel
-
+from .diffusion.respace import SpacedDiffusion
 
 def create_unet_model(
         image_size=64,
@@ -109,6 +109,18 @@ def create_gaussian_diffusion(steps=1000, noise_schedule="squaredcos_cap_v2", pr
     betas = get_named_beta_schedule(noise_schedule, steps)
     gd = GaussianDiffusion(betas, predict_xstart=predict_xstart)
     return gd
+
+def create_ddim_diffusion(diffusion_kwargs, desired_timesteps=50):
+    # use respaced diffusion steps
+    num_timesteps = diffusion_kwargs['steps']
+
+    spacing = num_timesteps // desired_timesteps
+    spaced_ts = list(range(0, num_timesteps + 1, spacing))
+    betas = get_named_beta_schedule(diffusion_kwargs['noise_schedule'], num_timesteps)
+    diffusion_kwargs['betas'] = betas
+    del diffusion_kwargs['steps'], diffusion_kwargs['noise_schedule']
+    ddim_gd = SpacedDiffusion(spaced_ts, rescale_timesteps=True, original_num_steps=num_timesteps, **diffusion_kwargs)
+    return ddim_gd
 
 def model_defaults():
     return dict(

@@ -25,13 +25,16 @@ def params_to_state_dict(target_params, model):
         state_dict[name] = target_params[i]
     return state_dict
 
-def run_loop(model, gd, data, save_desc, lr=1e-3, start_epoch=0, epoch_block=10000, num_its=20, p_uncond=0.0, default_im='im_10.png', latent_orthog=False, ema_rate=0.9999, dataset='clevr', downweight=False, image_size=64, use_dist=False):
+def run_loop(model, gd, data, save_desc, lr=1e-3, start_epoch=0, epoch_block=10000, num_its=20, p_uncond=0.0, default_im='im_10.png', ddim_gd=None, latent_orthog=False, ema_rate=0.9999, dataset='clevr', downweight=False, image_size=64, use_dist=False):
     if use_dist: # distributed training
         from .util.dist_util import dev
         device = dev()
     else:
         device = 'cuda' if th.cuda.is_available() else 'cpu'
 
+    # ddim sampling for generating samples per epoch block
+    if ddim_gd == None:
+        ddim_gd = create_ddim_diffusion(diffusion_defaults())
     
     # ema_params = copy.deepcopy(list(model.parameters()))
     ema_model = EMA(model, beta=ema_rate, update_every=1)
@@ -47,7 +50,6 @@ def run_loop(model, gd, data, save_desc, lr=1e-3, start_epoch=0, epoch_block=100
     print(f'Saving model ckpts to {save_dir}')
 
     free = p_uncond > 0
-    num_uncond_epochs = 0
     for epoch in range(start_epoch, start_epoch + total_epochs):
         batch, cond = next(data)
         batch = batch.to(device)
@@ -89,7 +91,7 @@ def run_loop(model, gd, data, save_desc, lr=1e-3, start_epoch=0, epoch_block=100
         if epoch % epoch_block == 0:
             print(f'img at {epoch} epochs')
             print(f'Saving images to {imgs_save_dir}')
-            get_gen_images(model, gd, im_path=default_im, desc=str(epoch), save_dir=imgs_save_dir, free=free, dataset=dataset, sample_method='ddim', num_images=1, image_size=image_size)
+            get_gen_images(model, ddim_gd, im_path=default_im, desc=str(epoch), save_dir=imgs_save_dir, free=free, dataset=dataset, sample_method='ddim', num_images=1, image_size=image_size)
 
             print('loss:')
             print(loss)
@@ -98,10 +100,6 @@ def run_loop(model, gd, data, save_desc, lr=1e-3, start_epoch=0, epoch_block=100
             # save ema params
             # ema_state_dict = params_to_state_dict(ema_params, model)
             th.save(ema_model.state_dict(), os.path.join(save_dir, f'ema_{ema_rate}_{epoch}.pt'))
-
-            if epoch > 0:
-                print('frac uncond epochs so far')
-                print(num_uncond_epochs / epoch)
             
 
 def create_ema(save_desc, epoch_block=10000, last_epoch=140000):
