@@ -32,6 +32,9 @@ def get_im(im_path='clevr_im_10.png', resolution=64):
 def gen_image(model, gd, sample_method='ddim', batch_size=1, image_size=64, device='cuda', model_kwargs=None, num_images=4, desc='', save_dir='', dataset='clevr'):
     all_samples = []
     sample_loop_func = gd.p_sample_loop if sample_method == 'ddpm' else gd.ddim_sample_loop
+    if sample_method == 'ddim':
+        model = gd._wrap_model(model)
+
     # generate imgs
     for i in range(num_images):
         samples = sample_loop_func(
@@ -67,6 +70,8 @@ def gen_image_and_components(model, gd, separate=False, num_components=4, sample
         os.makedirs(save_dir, exist_ok=True)
     assert sample_method in ('ddpm', 'ddim')
     sample_loop_func = gd.p_sample_loop if sample_method == 'ddpm' else gd.ddim_sample_loop
+    if sample_method == 'ddim':
+        model = gd._wrap_model(model)
 
     # generate imgs
     for i in range(num_images):
@@ -108,6 +113,98 @@ def gen_image_and_components(model, gd, separate=False, num_components=4, sample
         grid = make_grid(samples, nrow=samples.shape[0], padding=0)
         # save row
         save_image(grid, os.path.join(save_dir, f'{dataset}_{image_size}{sep}{desc}_row{i}.png'))
+
+
+def gen_image_and_components_progressive(model, gd, steps=10, separate=False, num_components=4, sample_method='ddpm', im_path='clevr_im_10.png', batch_size=1, image_size=64, device='cuda', model_kwargs=None, desc='', save_dir='', dataset='clevr'):
+    """Generate row of orig image, individual components, and reconstructed image"""
+    sep = '_' if len(desc) > 0 else ''
+    orig_img = get_im(im_path, resolution=image_size)
+    latent = model.encode_latent(orig_img)
+    model_kwargs = {'latent': latent}
+
+    if separate:
+        save_image(orig_img.cpu(), os.path.join(save_dir, f'{dataset}_{image_size}{sep}{desc}_orig.png')) # save indiv orig
+
+    if len(save_dir) > 0:
+        os.makedirs(save_dir, exist_ok=True)
+    div = gd.num_timesteps // steps
+
+    # generate imgs
+    all_samples = [orig_img]
+
+    # individual components
+    for j in range(num_components):
+        samples_progressive = []
+        model_kwargs['latent_index'] = j
+        if separate:
+            os.makedirs(os.path.join(save_dir, f'comp_{j}_progressive/'), exist_ok=True)
+        
+        ind = 0
+        for sample in gd.p_sample_loop_progressive(
+            model,
+            (batch_size, 3, image_size, image_size),
+            device=device,
+            clip_denoised=True,
+            progress=True,
+            model_kwargs=model_kwargs,
+        ):
+            if ind % div == 0:
+                samples_progressive.append(sample['sample'])
+                if separate:
+                    save_image(sample['sample'].cpu(), os.path.join(save_dir, f'comp_{j}_progressive/') + f'step_{ind}.png')
+            ind += 1
+        samples_progressive.append(sample['sample']) # add final result
+        if separate:
+            save_image(sample['sample'].cpu(), os.path.join(save_dir, f'comp_{j}_progressive/') + f'step_{ind}.png')
+        
+        # save progressive row
+        samples = th.cat(samples_progressive, dim=0).cpu()   
+        grid = make_grid(samples, nrow=samples.shape[0], padding=0)
+        save_image(grid, os.path.join(save_dir, f'{dataset}_{image_size}{sep}{desc}_comp_{j}_progressive_row.png'))
+
+        # save indiv comp
+        if separate:
+            save_image(sample['sample'].cpu(), os.path.join(save_dir, f'{dataset}_{image_size}{sep}{desc}_{j}.png'))
+        all_samples.append(sample['sample'])
+    
+    # reconstruction
+    model_kwargs['latent_index'] = None
+    samples_progressive = []
+    ind = 0
+    if separate:
+        os.makedirs(os.path.join(save_dir, 'composition_progressive/'), exist_ok=True)
+    for sample in gd.p_sample_loop_progressive(
+        model,
+        (batch_size, 3, image_size, image_size),
+        device=device,
+        clip_denoised=True,
+        progress=True,
+        model_kwargs=model_kwargs,
+    ):
+        if ind % div == 0:
+            samples_progressive.append(sample['sample'])
+            if separate:
+                save_image(sample['sample'].cpu(), os.path.join(save_dir, 'composition_progressive/') + f'step_{ind}.png')
+        ind += 1
+    samples_progressive.append(sample['sample']) # add final result
+    if separate:
+        save_image(sample['sample'].cpu(), os.path.join(save_dir, 'composition_progressive/') + f'step_{ind}.png')
+
+    # save progressive row
+    samples = th.cat(samples_progressive, dim=0).cpu()   
+    grid = make_grid(samples, nrow=samples.shape[0], padding=0)
+    save_image(grid, os.path.join(save_dir, f'{dataset}_{image_size}{sep}{desc}_composition_progressive_row.png'))
+
+    # save indiv reconstruction
+    if separate:
+        save_image(sample['sample'].cpu(), os.path.join(save_dir, f'{dataset}_{image_size}{sep}{desc}.png'))
+    all_samples.append(sample['sample'])
+
+    samples = th.cat(all_samples, dim=0).cpu()   
+    grid = make_grid(samples, nrow=samples.shape[0], padding=0)
+    # save row
+    save_image(grid, os.path.join(save_dir, f'{dataset}_{image_size}{sep}{desc}_row.png'))
+
 
 # classifier-free guidance
 def get_model_fn(model, gd, batch_size=1, guidance_scale=10.0, device='cuda'):
@@ -158,14 +255,34 @@ def get_gen_images(model, gd, sample_method='ddim', im_path='clevr_im_10.png', l
     #         model_kwargs['latent_index'] = i
     #         gen_image(gen_model, gd, batch_size=batch_size, image_size=image_size, device=device, model_kwargs=model_kwargs, num_images=num_images, desc=desc+'_'+str(i), save_dir=save_dir, dataset=dataset)
 
+class CombinedModel:
+    def __init__(self, model, model2):
+        """model and model2 must have same params"""
+        self.model = model
+        self.model2 = model2
+
+        # model params
+        self.latent_dim = model.latent_dim
+        self.latent_dim_expand = model.latent_dim_expand
+        self.num_components = model.num_components 
+
+    def __call__(self, x, ts, **kwargs):
+        out1 = self.model(x, ts, **kwargs)
+        out2 = self.model2(x, ts, **kwargs)
+        return (out1 + out2) / 2
+    
+    def encode_latent(self, x):
+        latent1 = self.model.encode_latent(x)
+        latent2 = self.model2.encode_latent(x)
+        return th.cat((latent1, latent2)) # TODO shape
+    
 def combine_components(model, gd, indices=None, sample_method='ddim', im1='im_19.jpg', im2='im_02.jpg', device='cuda', num_images=4, model_kwargs={}, desc='', save_dir='', dataset='celebahq', combine_method='add', image_size=64):
     """Combine by adding components together
     combine_method: 'add', 'slice'
     """
     assert combine_method in ('add', 'slice')
     assert sample_method in ('ddpm', 'ddim')
-    sample_loop_func = gd.p_sample_loop if sample_method == 'ddpm' else gd.ddim_sample_loop
-
+    
     im1 = get_im(im_path=im1, resolution=image_size)
     im2 = get_im(im_path=im2, resolution=image_size)
     all_samples = [im1, im2]
@@ -200,6 +317,10 @@ def combine_components(model, gd, indices=None, sample_method='ddim', im1='im_19
     model_kwargs['latent'] = combined_latent
     
     # gen_image(model, gd, sample_method=sample_method, device=device, model_kwargs=model_kwargs, num_images=num_images, desc=desc, save_dir=save_dir, dataset=dataset)
+    sample_loop_func = gd.p_sample_loop if sample_method == 'ddpm' else gd.ddim_sample_loop
+    if sample_method == 'ddim':
+        model = gd._wrap_model(model)
+        
     sample = sample_loop_func(
             model,
             (1, 3, image_size, image_size),

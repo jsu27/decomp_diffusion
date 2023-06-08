@@ -102,7 +102,6 @@ class SpacedDiffusion(GaussianDiffusion):
             return model
         return _WrappedModel(model, self.timestep_map, self.rescale_timesteps, self.original_num_steps)
 
-# note: need to comment model params section for gen_clevr_add_combo
 class _WrappedModel:
     def __init__(self, model, timestep_map, rescale_timesteps, original_num_steps):
         self.model = model
@@ -110,17 +109,9 @@ class _WrappedModel:
         self.rescale_timesteps = rescale_timesteps
         self.original_num_steps = original_num_steps
 
-        # model params
-        self.latent_dim = model.latent_dim
-        self.latent_dim_expand = model.latent_dim_expand
-        self.num_components = model.num_components 
-
     def __call__(self, x, ts, **kwargs):
         map_tensor = th.tensor(self.timestep_map, device=ts.device, dtype=ts.dtype)
         new_ts = map_tensor[ts]
         if self.rescale_timesteps:
             new_ts = new_ts.float() * (1000.0 / self.original_num_steps)
         return self.model(x, new_ts, **kwargs)
-    
-    def encode_latent(self, x):
-        return self.model.encode_latent(x)

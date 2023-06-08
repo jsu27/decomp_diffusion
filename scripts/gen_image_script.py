@@ -104,8 +104,6 @@ if __name__=='__main__':
         del diffusion_kwargs['steps'], diffusion_kwargs['noise_schedule']
         gd = SpacedDiffusion(spaced_ts, rescale_timesteps=True, original_num_steps=num_timesteps, **diffusion_kwargs)
         
-        model = gd._wrap_model(model)
-
         num_images = 1 # deterministic
 
     if gen_images > 0: # generate multiple imgs
