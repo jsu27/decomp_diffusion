@@ -6,7 +6,7 @@ import torch as th
 from ema_pytorch import EMA
 from decomp_diffusion.image_datasets import get_dataset
 from decomp_diffusion.model_and_diffusion_util import *
-from decomp_diffusion.diffusion.respace import SpacedDiffusion # , _WrappedModel
+from decomp_diffusion.diffusion.respace import SpacedDiffusion
 from decomp_diffusion.gen_image import *
 
 # fix randomness
@@ -30,22 +30,25 @@ if __name__=='__main__':
     add_dict_to_argparser(parser, defaults)
 
     parser.add_argument('--ckpt_path', required=True)
+    parser.add_argument('--ckpt_path2', default=None) # specified only for cross-dataset
+
     parser.add_argument('--save_dir', required=True)
     parser.add_argument('--free', action='store_true') # if arg not provided, False
     parser.add_argument('--guidance_scale', type=float, default=10.0)
     parser.add_argument('--im_path', default='clevr_im_10.png')
-    # parser.add_argument('--combine', action='store_true')
+    parser.add_argument('--im_path2', default=None) # for combination
+
     parser.add_argument('--dataset', default='clevr')
     parser.add_argument('--dataset2', default=None) # for multi-modal combination
-    parser.add_argument('--gen_images', default=0, type=int) # generate many images from dataset
+
+    parser.add_argument('--gen_images', default=0, type=int) # generate multiple images from dataset
     parser.add_argument('--sample_method', default='ddim')
     parser.add_argument('--data_dir', default='') # required if gen multiple
     parser.add_argument('--separate', action='store_true')
     parser.add_argument('--num_images', default=4, type=int) # if gen 1 img, how many samples
-    parser.add_argument('--combine_method', default=None)
+    parser.add_argument('--combine_method', default=None) # slice, add, or cross-dataset
     parser.add_argument('--indices', type=str, default=None) # comma-delimited list
-    parser.add_argument('--clevr_combine', action='store_true') # hard coded case
-    parser.add_argument('--clevr_indiv', action='store_true')
+
     args = parser.parse_args()
 
     has_cuda = th.cuda.is_available()
@@ -116,6 +119,10 @@ if __name__=='__main__':
                 im = data[i]
                 get_gen_images(model, gd, sample_method=sample_method, im_path=im, image_size=image_size, device=device, save_dir=save_dir, guidance_scale=guidance_scale, free=free, dataset=dataset, num_images=1, desc=f'im_{i:0{num_digits}}', separate=separate)
         else:
+            if combine_method == 'slice':
+                combine_func = combine_components_slice
+            elif combine_method == 'add':
+                combine_func = combine_components_add
             for _i in range(gen_images):
                 i = _i * step_size
                 print('_i', _i)
@@ -125,12 +132,18 @@ if __name__=='__main__':
                     j = _j * step_size
                     if i == 0: # only save once on first pass
                         get_gen_images(model, gd, separate=False, sample_method=sample_method, im_path=data2[j], image_size=image_size, device=device, save_dir=save_dir, guidance_scale=guidance_scale, free=free, dataset=dataset2, num_images=num_images, desc=f'im_{j:0{num_digits}}')
-                    combine_components(model, gd, image_size=image_size, indices=indices, im1=data[i], im2=data2[j], combine_method=combine_method, num_images=1, desc=f'comb{i}x{j}', save_dir=save_dir, dataset=dataset)
+                    
+                    combine_func(model, gd, im1=data[i], im2=data2[j], image_size=image_size, indices=indices, sample_method=sample_method, save_dir=save_dir, dataset=dataset, num_images=1, desc=f'comb{i}x{j}')
 
     elif combine_method is None:
         get_gen_images(model, gd, sample_method=sample_method, im_path=args.im_path, image_size=image_size, device=device, save_dir=save_dir, guidance_scale=guidance_scale, free=free, dataset=dataset, num_images=num_images, separate=separate)
     else:
-        combine_components(model, gd, image_size=image_size, indices=indices, combine_method=combine_method, sample_method=sample_method, save_dir=save_dir, dataset=dataset, num_images=num_images)
+        if combine_method == 'slice':
+            combine_func = combine_components_slice
+        elif combine_method == 'add':
+            combine_func = combine_components_add
+        combine_func(model, gd, im1=args.im_path, im2=args.im2_path, image_size=image_size, indices=indices, sample_method=sample_method, save_dir=save_dir, dataset=dataset, num_images=num_images)
+
 
         
     
