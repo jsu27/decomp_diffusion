@@ -89,7 +89,7 @@ def run_loop(model, gd, data, save_desc, lr=1e-3, start_epoch=0, epoch_block=100
         if epoch % epoch_block == 0:
             print(f'img at {epoch} epochs')
             print(f'Saving images to {imgs_save_dir}')
-            get_gen_images(model, gd, sample_method='ddpm', im_path=default_im, desc=str(epoch), save_dir=imgs_save_dir, free=free, dataset=dataset, num_images=2, image_size=image_size)
+            get_gen_images(model, gd, im_path=default_im, desc=str(epoch), save_dir=imgs_save_dir, free=free, dataset=dataset, sample_method='ddim', num_images=1, image_size=image_size)
 
             print('loss:')
             print(loss)
