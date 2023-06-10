@@ -4,7 +4,7 @@
 ![](sample_images/teaser_denoising.gif)
 
 
-### [Project Page]() | [Paper]() | [Google Colab][composable-demo] | [![][colab]][composable-demo] 
+### [Project Page]() | [Paper]() | [Google Colab][composable-demo] | [Huggingface][huggingface-demo] | [![][colab]][composable-demo] [![][huggingface]][huggingface-demo]
 
 <hr>
 
@@ -24,7 +24,9 @@ This is the official codebase for **Unsupervised Compositional Image Decompositi
    
 
 [colab]: <https://colab.research.google.com/assets/colab-badge.svg>
+[huggingface]: <https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue>
 [composable-demo]: <https://colab.research.google.com/drive/103YlXU0Pcfx7ndU2ZTozBy15fVzkhHyl?usp=sharing>
+[huggingface-demo]: <https://huggingface.co/spaces/jsu27/decomp-diffusion>
 
 --------------------------------------------------------------------------------------------------------
 
