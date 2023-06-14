@@ -12,7 +12,7 @@ This is the official codebase for **Unsupervised Compositional Image Decompositi
 
 [Unsupervised Compositional Image Decomposition with Diffusion Models]()
     <br>
-    [Jocelin Su](https://github.com/jsu27) <sup>1</sup>,
+    [Jocelin Su](https://github.com/jsu27) <sup>1*</sup>,
     [Yilun Du](https://yilundu.github.io) <sup>1*</sup>,
     [Nan Liu](https://nanliu.io) <sup>2*</sup>,
     [Joshua B. Tenenbaum](https://mitibmwatsonailab.mit.edu/people/joshua-tenenbaum/) <sup>1</sup>
