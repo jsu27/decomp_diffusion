@@ -140,16 +140,9 @@ def create_argparser():
         resume_checkpoint="",
         use_fp16=False,
         fp16_scale_growth=1e-3,
-        dataset="clevr",
-        log_folder=None,
-        num_images=None,
         use_ddp=True,
-        p_uncond=0.0,
-        latent_orthog=False,
-        extra_desc='',
-        downweight=False
     )
-
+    defaults.update(training_defaults())
     defaults.update(model_defaults())
     defaults.update(diffusion_defaults())
     defaults.update(unet_model_defaults())
