@@ -34,6 +34,8 @@ def create_unet_model(
     if channel_mult == "":
         if image_size == 64:
             channel_mult = (1, 2, 3) # (1, 2, 3, 4)
+        elif image_size == 128:
+            channel_mult = (1, 2, 3, 4)
         elif image_size < 64: # eg 35
             channel_mult = (1, 2)
     elif len(channel_mult) > 0: # passed in comma-delimited series of numbers
