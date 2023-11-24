@@ -111,7 +111,7 @@ See our paper for details on training datasets. We provide links for **CLEVR**, 
 --------------------------------------------------------------------------------------------------------
 
 ## Models
-See our paper for details on model parameters for each dataset. We provide links to pre-trained models below, as well as their non-default parameter flags.
+See our paper for details on model parameters for each dataset. We provide links to pre-trained models below, as well as their non-default parameter flags. We used `--batch_size 32` during training.
 
 | Model | Link | Model Flags
 | :---: | :---: | :---: |
