@@ -124,7 +124,12 @@ See our paper for details on model parameters for each dataset. We provide links
 | CelebA-HQ | [Link](https://www.dropbox.com/s/687wuamoud4cs9x/celeb_model.pt) | `--enc_channels 128`
 | Faces | [Link](https://www.dropbox.com/s/ia1ehqtpch4b2mz/faces_model.pt) | `--enc_channels 128`
 | CLEVR Toy | [Link](https://www.dropbox.com/s/f90ogyqk7siedid/toy_model.pt) | `--emb_dim 64 --enc_channels 128`
+| Tetris | | `--image_size 32 --num_components 3 --num_res_blocks 1 --enc_channels 64`
+| VKITTI | | `--num_channels 64 --enc_channels 64 --emb_dim 256`
+| Combined KITTI | | `--num_channels 64 --enc_channels 64 --emb_dim 256`
+| Falcor3D | | `--num_channels 64 --emb_dim 32 --channel_mult 1,2`
 
+<!-- 
 ## Citing our Paper
 
 If you find our code useful for your research, please consider citing 
