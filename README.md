@@ -99,14 +99,19 @@ See `gen_image_script.py` for additional options such as generating additive com
 --------------------------------------------------------------------------------------------------------
 
 
-## Dataset
-See our paper for details on training datasets. We provide links for **CLEVR**, **CLEVR Toy**, and **Tetris** datasets. Note that Tetris images are 32x32 instead of 64x64.
+## Datasets
+See our paper for details on training datasets. Note that Tetris images are 32x32 instead of 64x64.
 
 | Dataset | Link | 
 | :---: | :---: | 
 | CLEVR | [Link](https://www.dropbox.com/s/1uk59q8aembfirp/images_clevr.tar.gz)
 | CLEVR Toy | [Link](https://www.dropbox.com/s/ajtvg1fmr2xec7b/clevr_toy.zip)
 | Tetris | [Link](https://www.dropbox.com/s/l0wtsfzo6mzjxls/tetris_images_32.zip)
+| CelebA-HQ 128x128 | [Link](https://www.dropbox.com/scl/fi/t14whi1jrs7aahrewoaew/celebahq_data128x128.zip?rlkey=xctq15n6wjzemb8piu9hl6bs8&dl=0)
+| KITTI | [Link](https://s3.eu-central-1.amazonaws.com/avg-kitti/data_tracking_image_2.zip)
+| Virtual KITTI 2 | [Link](http://download.europe.naverlabs.com//virtual_kitti_2.0.3/vkitti_2.0.3_rgb.tar)
+| Falcor3D | [Link](https://drive.google.com/uc?export=download&id=1XAQfFK1x6cpN1eiovbP0hVfLTm5SsSoJ)
+| Anime | [Link](https://gwern.net/crop#danbooru2019-portraits)
 
 --------------------------------------------------------------------------------------------------------
 
@@ -120,7 +125,6 @@ See our paper for details on model parameters for each dataset. We provide links
 | Faces | [Link](https://www.dropbox.com/s/ia1ehqtpch4b2mz/faces_model.pt) | `--enc_channels 128`
 | CLEVR Toy | [Link](https://www.dropbox.com/s/f90ogyqk7siedid/toy_model.pt) | `--emb_dim 64 --enc_channels 128`
 
-<!-- 
 ## Citing our Paper
 
 If you find our code useful for your research, please consider citing 
