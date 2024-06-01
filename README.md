@@ -1,4 +1,4 @@
-# Unsupervised Compositional Image Decomposition with Diffusion Models
+# Compositional Image Decomposition with Diffusion Models
 ## We propose Decomp Diffusion, an unsupervised approach that discovers compositional concepts from images, represented by diffusion models. 
 
 ![](sample_images/teaser_denoising.gif)
@@ -10,16 +10,17 @@
 
 This is the official codebase for **Unsupervised Compositional Image Decomposition with Diffusion Models**.
 
-[Unsupervised Compositional Image Decomposition with Diffusion Models]()
+[Compositional Image Decomposition with Diffusion Models]()
     <br>
     [Jocelin Su](https://github.com/jsu27) <sup>1*</sup>,
-    [Yilun Du](https://yilundu.github.io) <sup>1*</sup>,
     [Nan Liu](https://nanliu.io) <sup>2*</sup>,
-    [Joshua B. Tenenbaum](https://mitibmwatsonailab.mit.edu/people/joshua-tenenbaum/) <sup>1</sup>
+    [Yanbo Wang](https://openreview.net/profile?id=~Yanbo_Wang3) <sup>3*</sup>,
+    [Joshua B. Tenenbaum](https://mitibmwatsonailab.mit.edu/people/joshua-tenenbaum/) <sup>1</sup>,
+    [Yilun Du](https://yilundu.github.io) <sup>1</sup>,
     <br>
     <sup>*</sup> Equal Contribution
     <br>
-    <sup>1</sup>MIT, <sup>2</sup>UIUC
+    <sup>1</sup>MIT, <sup>2</sup>UIUC, <sup>3</sup> TU Delft
     <br>
    
 
