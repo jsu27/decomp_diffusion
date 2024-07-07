@@ -4,7 +4,7 @@
 ![](sample_images/teaser_denoising.gif)
 
 
-### [Project Page]() | [Paper]() | [Google Colab][composable-demo] | [Huggingface][huggingface-demo] | [![][colab]][composable-demo] [![][huggingface]][huggingface-demo]
+### [Project Page](https://energy-based-model.github.io/decomp-diffusion/) | [Paper](https://arxiv.org/abs/2406.19298) | [Google Colab][composable-demo] | [Huggingface][huggingface-demo] | [![][colab]][composable-demo] [![][huggingface]][huggingface-demo]
 
 <hr>
 
